@@ -1,0 +1,65 @@
+services:
+  postgres-bridge:
+    build:
+      context: .
+      dockerfile: bridge/Dockerfile
+    container_name: postgres-bridge
+    restart: unless-stopped
+    ports:
+      # Securely bind to localhost (127.0.0.1) only, preventing exposure to the local network.
+      # WSL2 automatically forwards localhost:13714 from Windows to WSL2.
+      - "127.0.0.1:13714:13714"
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_READONLY_USER=${DB_READONLY_USER}
+      - DB_READONLY_PASSWORD=${DB_READONLY_PASSWORD}
+      - DB_SSLMODE=${DB_SSLMODE:-require}
+      - DB_SSLROOTCERT=${DB_SSLROOTCERT:-}
+      - ALLOWED_DATABASES=${ALLOWED_DATABASES:-${database:-}}
+      - ALLOWED_SCHEMAS=${ALLOWED_SCHEMAS:-${schema:-}}
+      - ALLOWED_TABLES=${ALLOWED_TABLES:-${tables:-}}
+      - database=${database:-${ALLOWED_DATABASES:-}}
+      - schema=${schema:-${ALLOWED_SCHEMAS:-}}
+      - tables=${tables:-${ALLOWED_TABLES:-}}
+    # Server certificate used by DB_SSLMODE=verify-ca/verify-full (DB_SSLROOTCERT=/certs/server.crt)
+    volumes:
+      - ./certs:/certs:ro
+
+  psql-cron:
+    build:
+      context: .
+      dockerfile: cron/Dockerfile
+    container_name: psql-cron
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    # Hardening: no listening ports, read-only root filesystem, no extra privileges
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      # Dedicated credentials, separate from the bridge's
+      - CRON_DB_USER=${CRON_DB_USER}
+      - CRON_DB_PASSWORD=${CRON_DB_PASSWORD}
+      - DB_SSLMODE=${DB_SSLMODE:-require}
+      - DB_SSLROOTCERT=${DB_SSLROOTCERT:-}
+      - CRON_ALLOWED_DATABASES=${CRON_ALLOWED_DATABASES:-}
+      - CRON_ALLOWED_SCHEMAS=${CRON_ALLOWED_SCHEMAS:-}
+      - CRON_ALLOWED_TABLES=${CRON_ALLOWED_TABLES:-}
+      - DEFAULT_CRON_SCHEDULE=${DEFAULT_CRON_SCHEDULE:-0 * * * *}
+      - DEFAULT_OUTPUT_DIR=${DEFAULT_OUTPUT_DIR:-/app/output}
+      - RUN_ON_STARTUP=${RUN_ON_STARTUP:-true}
+      - RUN_ONCE=${RUN_ONCE:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./certs:/certs:ro
+      - ./cron/syncs:/app/syncs:ro
+      - ./cron/output:/app/output
+      # Only the export folder is writable; mounted at the same path the .ini files use as output_path
+      - type: bind
+        source: ${CRON_EXPORT_DIR}
+        target: ${CRON_EXPORT_DIR}

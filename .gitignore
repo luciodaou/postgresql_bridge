@@ -1,0 +1,11 @@
+.env
+certs/
+.venv/
+__pycache__/
+*.py[cod]
+*.tmp
+cron/output/*
+!cron/output/.gitkeep
+cron/syncs/*.ini
+cron/syncs/*.bak
+cron/PowerBI/

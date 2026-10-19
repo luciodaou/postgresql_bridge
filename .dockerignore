@@ -1,0 +1,9 @@
+.git
+.env
+.env.example
+certs
+**/.venv
+**/__pycache__
+cron/output
+cron/syncs
+cron/PowerBI

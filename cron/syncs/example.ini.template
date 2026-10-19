@@ -1,0 +1,29 @@
+# Example synchronization configuration file
+# Place files with the pattern <syncname>.ini in this folder.
+# The output files will be saved as <output_path>/<syncname>.json or <output_path>/<syncname>.csv
+
+database = my_database
+schema = my_schema
+
+# Export options:
+# - Single table: table = my_view
+# - Comma-separated: table = table1, table2
+# - All tables/views in schema: table = * (or leave 'table' empty)
+table = *
+
+# Optional: exclude specific tables when exporting all tables
+# exclude_tables = audit_log, temp_cache
+
+# Optional: whether to include views when table = * (default: true)
+# include_views = true
+
+csv = false
+json = true
+
+# Optional: output directory; must be inside CRON_EXPORT_DIR (defaults to DEFAULT_OUTPUT_DIR from .env)
+# output_path = /mnt/c/path/to/export folder
+
+# You can define multiple cron schedules using cron.<n> (e.g. cron.1, cron.2, etc.)
+# The sync will run whenever ANY of the defined schedules trigger.
+cron.1 = 9,39 7-20 * * 2-6
+cron.2 = 0 8 * * 1
