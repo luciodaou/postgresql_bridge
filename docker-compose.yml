@@ -26,6 +26,34 @@ services:
     volumes:
       - ./certs:/certs:ro
 
+  # Fundo Fixo CTO-FF dashboard: http://localhost:13715/
+  # Serves only the static pages and relays the page's own /csv queries to postgres-bridge over the
+  # internal compose network (same origin, no CORS). No DB credentials and no route to the DB here:
+  # postgres-bridge stays the only service that talks to PostgreSQL.
+  cto-ff-web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    container_name: cto-ff-web
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:13715:13715"
+    depends_on:
+      - postgres-bridge
+    environment:
+      - BRIDGE_URL=http://postgres-bridge:13714
+    volumes:
+      # Pages served at http://localhost:13715/<file>.html (edit without rebuilding)
+      - ./web/static:/app/static:ro
+
   psql-cron:
     build:
       context: .
