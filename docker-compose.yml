@@ -91,3 +91,7 @@ services:
       - type: bind
         source: ${CRON_EXPORT_DIR}
         target: ${CRON_EXPORT_DIR}
+      # Optional second export folder (falls back to cron/output when unset)
+      - type: bind
+        source: ${CRON_EXPORT_DIR_2:-./cron/output}
+        target: ${CRON_EXPORT_DIR_2:-/app/output2}

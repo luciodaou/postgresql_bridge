@@ -16,7 +16,8 @@ Current version: **1.0.0** (see [CHANGELOG.md](CHANGELOG.md)).
 `CRON_ALLOWED_DATABASES/SCHEMAS/TABLES` (separate from the bridge's `ALLOWED_*`, since the two read different
 schemas) are enforced on every sync; dedicated credentials `CRON_DB_USER/CRON_DB_PASSWORD`; connection settings
 cannot be overridden from `.ini` files; read-only root filesystem, all capabilities dropped, no ports, `syncs/`
-mounted read-only, and the only writable host folder is `CRON_EXPORT_DIR` (must match `output_path` in the `.ini`).
+mounted read-only, and the only writable host folders are `CRON_EXPORT_DIR` and the optional `CRON_EXPORT_DIR_2`
+(each `output_path` in a `.ini` must be inside one of them).
 
 ---
 
@@ -71,6 +72,8 @@ The `bridge/` service is a lightweight Python web service running inside Docker 
    CRON_ALLOWED_SCHEMAS=my_schema
    CRON_ALLOWED_TABLES=
    CRON_EXPORT_DIR="/mnt/c/path/to/export folder"
+   # Optional second export folder (leave empty if not needed)
+   CRON_EXPORT_DIR_2=
    ```
 
    **TLS**: connections to the database are encrypted by default (`DB_SSLMODE=require`), which does not verify the server certificate. To also verify it (recommended), save the server's certificate to `./certs/server.crt` (mounted read-only at `/certs` by `docker-compose.yml`) and set:
@@ -156,7 +159,7 @@ table = *                      # '*' or empty = all tables/views; or "t1, t2" fo
 json = true
 csv = false
 
-output_path = /mnt/c/path/to/export folder   # must be inside CRON_EXPORT_DIR; defaults to DEFAULT_OUTPUT_DIR
+output_path = /mnt/c/path/to/export folder   # must be inside CRON_EXPORT_DIR or CRON_EXPORT_DIR_2; defaults to DEFAULT_OUTPUT_DIR
 
 # One or more cron schedules; the sync runs when ANY of them fires
 cron.1 = 9,39 7-20 * * 1-5
@@ -173,7 +176,8 @@ See `cron/syncs/example.ini.template`. Output files are named `<table>.json` / `
 | `CRON_DB_USER`, `CRON_DB_PASSWORD` | Credentials for the exporter (separate from the bridge's `DB_READONLY_*`). Connection settings can **not** be set in `.ini` files. |
 | `DB_HOST`, `DB_PORT`, `DB_SSLMODE`, `DB_SSLROOTCERT` | Shared with the bridge; TLS works exactly as described above. |
 | `CRON_ALLOWED_DATABASES`, `CRON_ALLOWED_SCHEMAS`, `CRON_ALLOWED_TABLES` | Same rule as the bridge's allowlists (empty or `*` = unrestricted). A sync outside them is refused; with `table = *`, tables outside `CRON_ALLOWED_TABLES` are skipped. Tables match by name or `schema.table`. |
-| `CRON_EXPORT_DIR` | Host folder mounted read-write into the container at the same path. It is the only writable host location, so `output_path` values must be inside it. |
+| `CRON_EXPORT_DIR` | Host folder mounted read-write into the container at the same path. Together with `CRON_EXPORT_DIR_2` it is the only writable host location, so `output_path` values must be inside one of them. |
+| `CRON_EXPORT_DIR_2` | Optional second export folder, mounted the same way. Leave empty if one folder is enough (it then falls back to `cron/output/`). Changing either folder requires recreating the container: `docker compose up -d psql-cron`. |
 | `DEFAULT_CRON_SCHEDULE` | Used when a sync defines no `cron`. |
 | `DEFAULT_OUTPUT_DIR` | Used when a sync defines no `output_path` (default `/app/output`, i.e. `cron/output/`). |
 | `RUN_ON_STARTUP`, `RUN_ONCE` | Run all syncs at start; run once and exit. |
